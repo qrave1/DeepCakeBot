@@ -1,0 +1,46 @@
+volumes:
+  deepcake_pg_data:
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    profiles: ["infra"]
+    container_name: deepcake-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=deepcake
+    volumes:
+      - deepcake_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - default
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["app"]
+    container_name: deepcake-bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/deepcake?sslmode=disable
+      TIMEZONE: Europe/Moscow
+      WEATHER_SCHEDULE_HOUR: 7
+      CITY: Moscow
+      COUNTRY_CODE: RU
+    networks:
+      - default
+

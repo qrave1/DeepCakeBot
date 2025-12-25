@@ -1,0 +1,31 @@
+version: "3"
+
+dotenv: [ ".env" ]
+
+vars:
+  REGISTRY: "ghcr.io/qrave1/DeepCakeBot"
+  COMPOSE_FILE: docker-compose.yml
+  BUILD_TIMESTAMP:
+    sh: date +%Y_%m_%d_%H_%M_%S
+  BACK_TAG: "{{.REGISTRY}}:{{.BUILD_TIMESTAMP}}"
+
+tasks:
+  build:
+    desc: Build Docker image with timestamp tag
+    cmds:
+      - docker build -t {{.BACK_TAG}} .
+      - docker tag {{.BACK_TAG}} {{.REGISTRY}}:latest
+
+  push:
+    desc: Build and push Docker image to registry
+    deps: [ build ]
+    cmds:
+      - docker push {{.BACK_TAG}}
+      - docker push {{.REGISTRY}}:latest
+
+  # Docker Compose
+  infra:
+    desc: Run Infrastructure
+    cmds:
+      - echo "Start dev environment"
+      - docker compose --file {{.COMPOSE_FILE}} --profile infra up -d
